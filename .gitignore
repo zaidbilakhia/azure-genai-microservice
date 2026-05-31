@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.py[cod]
+
+.env
+.venv/
+venv/
+
+.cache/
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+.DS_Store

@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.git/
+.gitignore
+README.md
+.cache/
+.pytest_cache/
+.DS_Store
