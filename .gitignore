@@ -16,3 +16,12 @@ venv/
 azure-credentials.json
 *.pem
 *.key
+
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/*.tfvars
+!terraform/terraform.tfvars.example
+crash.log
+crash.*.log

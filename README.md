@@ -255,6 +255,46 @@ Milestone 9 troubleshooting:
 - If the endpoint is not reachable, check that ingress is external and target port is `8000`.
 - If the OpenAI call fails, check the `OPENAI_API_KEY` secret and `OPENAI_MODEL`.
 
+## Milestone 10: Terraform Infrastructure as Code
+
+Before Milestone 10, Azure resources were created with Bash scripts. Now the backend Azure infrastructure is also described with Terraform.
+
+Terraform creates:
+
+- Azure Resource Group
+- Azure Container Registry
+- Log Analytics Workspace
+- Azure Container Apps Environment
+- Azure Container App for the FastAPI backend
+
+The real OpenAI API key is not stored in Terraform. Terraform creates a placeholder secret so the Container App can be defined, then you update the real secret with `scripts/azure_set_secrets.sh`.
+
+Run Terraform:
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+nano terraform.tfvars
+
+terraform init
+terraform fmt
+terraform validate
+terraform plan
+terraform apply
+```
+
+After Terraform apply, set the real OpenAI secret and test the backend:
+
+```bash
+cd ..
+export OPENAI_API_KEY=your_key
+./scripts/azure_set_secrets.sh
+./scripts/azure_show_urls.sh
+./scripts/azure_test_backend.sh
+```
+
+Terraform validation also runs in GitHub Actions, but CI only runs `fmt`, `init -backend=false`, and `validate`. It does not run `plan` or `apply`, and it does not need Azure credentials or `OPENAI_API_KEY`.
+
 ## Setup
 
 1. Create and activate a virtual environment:
