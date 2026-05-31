@@ -35,6 +35,128 @@ GitHub Actions checks the project automatically when code is pushed to `main` or
 - CI does not call OpenAI.
 - CI does not need `OPENAI_API_KEY`.
 
+## Milestone 8: Azure Backend Deployment
+
+The FastAPI backend can be deployed to Azure Container Apps. The backend Docker image is stored in Azure Container Registry, and `OPENAI_API_KEY` is stored as a Container App secret. The Streamlit frontend still runs locally for now and can call either the local backend or the Azure backend by setting `BACKEND_URL`.
+
+This milestone does not use Terraform yet and does not deploy the Streamlit frontend to Azure. The app still uses the OpenAI API, not Azure OpenAI.
+
+Prerequisites:
+
+- Azure account
+- Azure CLI installed
+- Docker installed
+- Logged in with `az login`
+- `OPENAI_API_KEY` exported locally
+
+Install or update the Azure Container Apps CLI extension if needed:
+
+```bash
+az extension add --name containerapp --upgrade
+```
+
+Set deployment variables:
+
+```bash
+export AZURE_RESOURCE_GROUP=rg-azure-genai-microservice
+export AZURE_LOCATION=westeurope
+export AZURE_CONTAINER_REGISTRY=<globally_unique_acr_name>
+export AZURE_CONTAINER_APP_ENV=cae-azure-genai-microservice
+export AZURE_BACKEND_APP_NAME=ca-azure-genai-backend
+export AZURE_BACKEND_IMAGE_NAME=azure-genai-backend
+export OPENAI_API_KEY=your_key
+export OPENAI_MODEL=gpt-4o-mini
+export LOG_LEVEL=INFO
+```
+
+`AZURE_CONTAINER_REGISTRY` must be globally unique across Azure.
+
+Create resources and deploy the backend:
+
+```bash
+az login
+chmod +x scripts/*.sh
+./scripts/azure_create_resources.sh
+```
+
+Show deployed URLs:
+
+```bash
+./scripts/azure_show_urls.sh
+```
+
+Update the OpenAI secret later:
+
+```bash
+export OPENAI_API_KEY=your_new_key
+./scripts/azure_set_secrets.sh
+```
+
+Test the deployed backend:
+
+```bash
+curl -X POST "https://YOUR_BACKEND_FQDN/analyze" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "The customer is frustrated because the payment failed twice and they need urgent help."}'
+```
+
+Run local Streamlit against the Azure backend:
+
+```bash
+export BACKEND_URL=https://YOUR_BACKEND_FQDN
+streamlit run frontend/streamlit_app.py
+```
+
+### GitHub Azure Deployment Setup
+
+Create an Azure service principal scoped to your resource group:
+
+```bash
+az ad sp create-for-rbac \
+  --name sp-azure-genai-microservice \
+  --role contributor \
+  --scopes /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP_NAME> \
+  --sdk-auth
+```
+
+Copy the output JSON into the GitHub secret `AZURE_CREDENTIALS`.
+
+GitHub secrets:
+
+```text
+AZURE_CREDENTIALS
+OPENAI_API_KEY
+```
+
+GitHub repository variables:
+
+```text
+AZURE_RESOURCE_GROUP
+AZURE_CONTAINER_REGISTRY
+AZURE_CONTAINER_APP_ENV
+AZURE_BACKEND_APP_NAME
+AZURE_BACKEND_IMAGE_NAME
+OPENAI_MODEL
+LOG_LEVEL
+```
+
+The deployment workflow is manual for now. Run it from GitHub Actions:
+
+```text
+Deploy Backend to Azure Container Apps
+```
+
+The workflow assumes Azure resources already exist. Use `scripts/azure_create_resources.sh` for first-time resource creation.
+
+### Azure Troubleshooting
+
+- If the ACR name is rejected, choose a new globally unique `AZURE_CONTAINER_REGISTRY`.
+- If `az containerapp` is missing, run `az extension add --name containerapp --upgrade`.
+- If Docker returns permission denied locally, try `newgrp docker` or check your Docker daemon permissions.
+- If the deployed app returns `CONFIG_ERROR`, check the Container App secret `openai-api-key`.
+- If local Streamlit cannot reach Azure, check `BACKEND_URL` and Container App ingress.
+- Never commit `.env`, `azure-credentials.json`, `.pem`, or `.key` files.
+
 ## Setup
 
 1. Create and activate a virtual environment:

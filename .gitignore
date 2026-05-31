@@ -12,3 +12,7 @@ venv/
 .coverage
 
 .DS_Store
+
+azure-credentials.json
+*.pem
+*.key

@@ -31,6 +31,9 @@ st.caption("Analyze customer/business text using a GenAI backend.")
 
 with st.expander("Debug info"):
     st.write(f"Backend URL: `{BACKEND_URL}`")
+    st.write("Local backend example: `http://127.0.0.1:8000`")
+    st.write("Azure backend example: `https://your-container-app-url`")
+    st.write("Set `BACKEND_URL` to switch between local and Azure backends.")
 
 st.text_area("Example text", value=EXAMPLE_TEXT, height=120, disabled=True)
 
