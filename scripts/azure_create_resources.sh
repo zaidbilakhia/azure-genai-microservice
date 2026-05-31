@@ -6,9 +6,6 @@ AZURE_LOCATION="${AZURE_LOCATION:-westeurope}"
 AZURE_CONTAINER_REGISTRY="${AZURE_CONTAINER_REGISTRY:-acrgenaimicroservice}"
 AZURE_CONTAINER_APP_ENV="${AZURE_CONTAINER_APP_ENV:-cae-azure-genai-microservice}"
 AZURE_BACKEND_APP_NAME="${AZURE_BACKEND_APP_NAME:-ca-azure-genai-backend}"
-AZURE_BACKEND_IMAGE_NAME="${AZURE_BACKEND_IMAGE_NAME:-azure-genai-backend}"
-OPENAI_MODEL="${OPENAI_MODEL:-gpt-4o-mini}"
-LOG_LEVEL="${LOG_LEVEL:-INFO}"
 LOG_WORKSPACE_NAME="log-${AZURE_BACKEND_APP_NAME}"
 
 echo "Checking Azure login..."
@@ -17,12 +14,7 @@ if ! az account show >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-  echo "OPENAI_API_KEY is required. Export it before running this script."
-  exit 1
-fi
-
-echo "Creating resource group: ${AZURE_RESOURCE_GROUP}"
+echo "Creating resource group if needed: ${AZURE_RESOURCE_GROUP}"
 az group create \
   --name "$AZURE_RESOURCE_GROUP" \
   --location "$AZURE_LOCATION"
@@ -77,69 +69,9 @@ else
   echo "Azure Container Apps environment already exists."
 fi
 
-echo "Logging in to Azure Container Registry..."
-az acr login --name "$AZURE_CONTAINER_REGISTRY"
-
-ACR_LOGIN_SERVER="$(az acr show \
-  --name "$AZURE_CONTAINER_REGISTRY" \
-  --resource-group "$AZURE_RESOURCE_GROUP" \
-  --query loginServer \
-  -o tsv)"
-
-IMAGE="${ACR_LOGIN_SERVER}/${AZURE_BACKEND_IMAGE_NAME}:latest"
-
-echo "Building backend Docker image: ${IMAGE}"
-docker build -f Dockerfile.backend -t "$IMAGE" .
-
-echo "Pushing backend Docker image to ACR..."
-docker push "$IMAGE"
-
-echo "Reading ACR credentials for Container App registry access..."
-ACR_USERNAME="$(az acr credential show \
-  --name "$AZURE_CONTAINER_REGISTRY" \
-  --query username \
-  -o tsv)"
-
-ACR_PASSWORD="$(az acr credential show \
-  --name "$AZURE_CONTAINER_REGISTRY" \
-  --query "passwords[0].value" \
-  -o tsv)"
-
-if az containerapp show \
-  --name "$AZURE_BACKEND_APP_NAME" \
-  --resource-group "$AZURE_RESOURCE_GROUP" >/dev/null 2>&1; then
-  echo "Container App exists. Updating backend app: ${AZURE_BACKEND_APP_NAME}"
-  az containerapp secret set \
-    --name "$AZURE_BACKEND_APP_NAME" \
-    --resource-group "$AZURE_RESOURCE_GROUP" \
-    --secrets openai-api-key="$OPENAI_API_KEY"
-
-  az containerapp update \
-    --name "$AZURE_BACKEND_APP_NAME" \
-    --resource-group "$AZURE_RESOURCE_GROUP" \
-    --image "$IMAGE" \
-    --set-env-vars OPENAI_API_KEY=secretref:openai-api-key OPENAI_MODEL="$OPENAI_MODEL" LOG_LEVEL="$LOG_LEVEL"
-else
-  echo "Creating backend Container App: ${AZURE_BACKEND_APP_NAME}"
-  az containerapp create \
-    --name "$AZURE_BACKEND_APP_NAME" \
-    --resource-group "$AZURE_RESOURCE_GROUP" \
-    --environment "$AZURE_CONTAINER_APP_ENV" \
-    --image "$IMAGE" \
-    --registry-server "$ACR_LOGIN_SERVER" \
-    --registry-username "$ACR_USERNAME" \
-    --registry-password "$ACR_PASSWORD" \
-    --target-port 8000 \
-    --ingress external \
-    --secrets openai-api-key="$OPENAI_API_KEY" \
-    --env-vars OPENAI_API_KEY=secretref:openai-api-key OPENAI_MODEL="$OPENAI_MODEL" LOG_LEVEL="$LOG_LEVEL"
-fi
-
-FQDN="$(az containerapp show \
-  --name "$AZURE_BACKEND_APP_NAME" \
-  --resource-group "$AZURE_RESOURCE_GROUP" \
-  --query properties.configuration.ingress.fqdn \
-  -o tsv)"
-
-echo "Backend deployed successfully:"
-echo "https://${FQDN}"
+echo "Azure infrastructure is ready."
+echo "Resource group: ${AZURE_RESOURCE_GROUP}"
+echo "Location: ${AZURE_LOCATION}"
+echo "Container registry: ${AZURE_CONTAINER_REGISTRY}"
+echo "Container Apps environment: ${AZURE_CONTAINER_APP_ENV}"
+echo "Next command: ./scripts/azure_deploy_backend.sh"

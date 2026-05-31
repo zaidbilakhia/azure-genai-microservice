@@ -77,6 +77,7 @@ Create resources and deploy the backend:
 az login
 chmod +x scripts/*.sh
 ./scripts/azure_create_resources.sh
+./scripts/azure_deploy_backend.sh
 ```
 
 Show deployed URLs:
@@ -156,6 +157,103 @@ The workflow assumes Azure resources already exist. Use `scripts/azure_create_re
 - If the deployed app returns `CONFIG_ERROR`, check the Container App secret `openai-api-key`.
 - If local Streamlit cannot reach Azure, check `BACKEND_URL` and Container App ingress.
 - Never commit `.env`, `azure-credentials.json`, `.pem`, or `.key` files.
+
+## Milestone 9: Actual Azure Deployment and Live Backend Test
+
+Milestone 9 makes the Azure backend deployment flow easier to run and debug manually.
+
+- Step 1 checks local tools, Docker, Azure login, and required environment variables.
+- Step 2 creates Azure infrastructure.
+- Step 3 builds and deploys the backend Docker image.
+- Step 4 tests the live backend URL.
+- Step 5 shows Azure Container App logs.
+- Step 6 runs local Streamlit against the deployed backend.
+- GitHub Actions can redeploy the backend later after resources exist.
+
+Login to Azure:
+
+```bash
+az login
+```
+
+Set environment variables:
+
+```bash
+export AZURE_RESOURCE_GROUP=rg-azure-genai-microservice
+export AZURE_LOCATION=westeurope
+export AZURE_CONTAINER_REGISTRY=<globally_unique_acr_name>
+export AZURE_CONTAINER_APP_ENV=cae-azure-genai-microservice
+export AZURE_BACKEND_APP_NAME=ca-azure-genai-backend
+export AZURE_BACKEND_IMAGE_NAME=azure-genai-backend
+export OPENAI_API_KEY=your_openai_key
+export OPENAI_MODEL=gpt-4o-mini
+export LOG_LEVEL=INFO
+```
+
+Make scripts executable:
+
+```bash
+chmod +x scripts/*.sh
+```
+
+Check prerequisites:
+
+```bash
+./scripts/azure_check_prereqs.sh
+```
+
+Create Azure resources:
+
+```bash
+./scripts/azure_create_resources.sh
+```
+
+Deploy backend:
+
+```bash
+./scripts/azure_deploy_backend.sh
+```
+
+Show URL:
+
+```bash
+./scripts/azure_show_urls.sh
+```
+
+Test live backend:
+
+```bash
+./scripts/azure_test_backend.sh
+```
+
+You can also pass the URL directly:
+
+```bash
+./scripts/azure_test_backend.sh https://YOUR_BACKEND_FQDN
+```
+
+Show live logs:
+
+```bash
+./scripts/azure_show_logs.sh
+```
+
+Run local Streamlit against Azure backend:
+
+```bash
+export BACKEND_URL=https://YOUR_BACKEND_FQDN
+streamlit run frontend/streamlit_app.py
+```
+
+Milestone 9 troubleshooting:
+
+- ACR name must be globally unique and only lowercase letters/numbers.
+- If the Container Apps extension is missing, run `az extension add --name containerapp --upgrade`.
+- If Docker has a permission issue, try `newgrp docker`.
+- If the deployed app returns `CONFIG_ERROR`, run `./scripts/azure_set_secrets.sh`.
+- If the image cannot be pulled, check ACR credentials and make sure admin access is enabled.
+- If the endpoint is not reachable, check that ingress is external and target port is `8000`.
+- If the OpenAI call fails, check the `OPENAI_API_KEY` secret and `OPENAI_MODEL`.
 
 ## Setup
 
